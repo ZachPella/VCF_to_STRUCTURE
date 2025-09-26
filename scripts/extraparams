@@ -1,0 +1,12 @@
+#define FREQSCORR   1 #use a model where allele frequencies are correlated, 0 if wanting
+#define ONEFST   0 #not all have same Fst value, we see different levels of divergence
+#define INFERALPHA   1 #idk how to choose alpha value
+#define POPALPHAS   0 #not recommended, different alpha per population, use if asymmetric admixture
+#define RECOMBINE   0 #not using linkage model
+#define COMPUTEPROB   0 #print log-likelihood after each update
+#define INFERLAMBDA   0 #says not recommended
+#define NOADMIX   0 #assume admixture, 1 if no admixture
+#define ADMBURNIN   0 #not using linkage model, only use when recombine=1
+#define USEPOPINFO   0 #only when popdata=1
+#define GENSBACK   0 #only use if usepopinfo=1
+#define MIGRPRIOR   0.05 #must be 0.001--0.1 XXXXXXXXXX
