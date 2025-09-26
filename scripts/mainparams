@@ -1,0 +1,17 @@
+#define INFILE   clean_structure_fixed.str
+#define OUTFILE   cohort_ticks_june2025_snps_passing_only.maf005.miss03_results
+#define NUMINDS   61
+#define NUMLOCI   299218
+#define LABEL   1
+#define POPDATA   0
+#define POPFLAG   0
+#define PHENOTYPE   0
+#define EXTRACOLS   0
+#define PHASEINFO   0
+#define MISSING   -9
+#define PLOIDY   2
+#define ONEROWPERIND   0
+#define GENENAMES   0
+#define MAPDISTANCES   0
+#define BURNIN   50000
+#define NUMREPS   200000
