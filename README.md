@@ -8,6 +8,8 @@ This pipeline processes genomic variant data through several steps:
 1. **Linkage Disequilibrium Pruning** - Removes linked SNPs to create an independent marker set
 2. **Format Conversion** - Converts VCF to STRUCTURE format using PGDSpider
 3. **Population Structure Analysis** - Runs STRUCTURE analysis using structure-threader
+4. **Results Harvesting** - Processes STRUCTURE output to determine optimal K
+5. **Visualization** - Generates publication-ready admixture plots
 
 ## Prerequisites
 
@@ -16,6 +18,8 @@ This pipeline processes genomic variant data through several steps:
 - **PGDSpider** - For VCF to STRUCTURE format conversion
 - **STRUCTURE** (v2.3+) - Population structure analysis
 - **structure-threader** (v1.3+) - Parallel STRUCTURE execution
+- **structureHarvester** - For processing STRUCTURE results and Evanno method
+- **Python 3** - For visualization scripts (matplotlib, pandas, numpy)
 
 ### System Requirements
 - High-performance computing cluster with SLURM scheduler
@@ -27,12 +31,14 @@ This pipeline processes genomic variant data through several steps:
 ```
 VCF_to_STRUCTURE/
 ├── scripts/
-│   ├── plink.sh           # LD pruning with PLINK2
-│   ├── pgd_spider.sh      # VCF to STRUCTURE conversion
-│   ├── structure.sh       # STRUCTURE analysis execution
-│   ├── mainparams         # STRUCTURE main parameters
-│   ├── extraparams        # STRUCTURE advanced parameters
-│   └── spid.spid         # PGDSpider configuration
+│   ├── plink.sh                 # LD pruning with PLINK2
+│   ├── pgd_spider.sh            # VCF to STRUCTURE conversion
+│   ├── structure.sh             # STRUCTURE analysis execution
+│   ├── structureHarvester.py    # Process STRUCTURE results
+│   ├── plot_county.py           # Generate admixture plots
+│   ├── mainparams               # STRUCTURE main parameters
+│   ├── extraparams              # STRUCTURE advanced parameters
+│   └── spid.spid                # PGDSpider configuration
 └── README.md
 ```
 
@@ -65,6 +71,7 @@ sbatch scripts/pgd_spider.sh
 - Diploid genotype handling
 - SNP-only data export
 - Missing data preservation (coded as -9)
+- Monomorphic SNP exclusion
 
 **Output:** `*.str` - STRUCTURE format file
 
@@ -83,21 +90,75 @@ sbatch scripts/structure.sh
 - MCMC: 200,000 iterations
 - Threads: 12 (parallel execution)
 
+**Important Notes:**
+- The script uses the `--params` flag to specify parameter files
+- Both `mainparams` and `extraparams` must be in the working directory
+- STRUCTURE binary path is defined explicitly in the script
+
+### Step 4: Results Harvesting
+
+Process STRUCTURE results to determine optimal K using the Evanno method.
+
+```bash
+python scripts/structureHarvester.py
+```
+
+**Outputs:**
+- Evanno method statistics (ΔK values)
+- CLUMPP-formatted files for downstream analysis
+- Summary tables for K selection
+
+### Step 5: Visualization
+
+Generate labeled admixture plots grouped by geographic location.
+
+```bash
+python3 scripts/plot_county.py <K_value>
+```
+
+**Example:**
+```bash
+python3 scripts/plot_county.py 2
+```
+
+**Requirements:**
+- Input file: `K{K}.indfile` (STRUCTURE output)
+- Label file: `name_and_state_county.txt` (sample metadata)
+
+**Features:**
+- Hierarchical geographic grouping (State → County)
+- Custom sample ordering by location
+- Multi-level labeling for Nebraska counties
+- High-resolution PDF output
+
+**Geographic Grouping Order:**
+1. Iowa (state-level)
+2. Nebraska - Thurston County
+3. Nebraska - Dodge County
+4. Nebraska - Douglas County
+5. Nebraska - Sarpy County
+6. Kansas (state-level)
+7. Other
+
 ## Configuration Files
 
 ### mainparams
 Core STRUCTURE parameters including:
+- **INFILE**: clean_structure_fixed.str
 - **NUMINDS**: 61 (number of individuals)
 - **NUMLOCI**: 299,218 (number of loci)
 - **BURNIN**: 50,000 (burn-in period)
 - **NUMREPS**: 200,000 (MCMC iterations)
+- **MISSING**: -9 (missing data code)
+- **PLOIDY**: 2 (diploid)
 
 ### extraparams
 Advanced model parameters:
-- **FREQSCORR**: 1 (correlated allele frequencies)
+- **FREQSCORR**: 1 (correlated allele frequencies model)
 - **INFERALPHA**: 1 (infer alpha parameter)
-- **MIGRPRIOR**: 0.05 (migration prior)
 - **NOADMIX**: 0 (allow admixture)
+- **MIGRPRIOR**: 0.05 (migration prior, range: 0.001-0.1)
+- **POPALPHAS**: 0 (single alpha for all populations)
 
 ### spid.spid
 PGDSpider conversion settings:
@@ -105,27 +166,43 @@ PGDSpider conversion settings:
 - Output: STRUCTURE format
 - Data type: SNP only
 - Ploidy: Diploid
+- Exclude monomorphic SNPs
+- No population file
 
 ## Dataset Information
 
 **Current Dataset:** Tick genomic data (June 2025 cohort)
 - **Individuals:** 61 samples
 - **Original SNPs:** ~299K loci
-- **Filtering:** MAF ≥ 0.01, missingness ≤ 0%, MAC ≥ 2, biallelic only
+- **Filtering:** MAF ≥ 0.01, missingness = 0%, MAC ≥ 2, biallelic only
 - **Final dataset:** LD-pruned SNP set
+- **Geographic scope:** Iowa, Nebraska (multiple counties), Kansas
 
 ## Output Files
 
 ### PLINK Output
 - `*.prune.in` - List of independent SNPs retained
+- `*.prune.out` - List of SNPs removed during pruning
 - `*_pruned.vcf` - Filtered VCF with unlinked SNPs
+
+### PGDSpider Output
+- `*.str` - STRUCTURE format file
 
 ### STRUCTURE Results
 - `structure_results/` directory containing:
-  - Individual K value result files
+  - Individual K value result files (K1-K10)
+  - `*.indfile` - Individual ancestry coefficients
   - Log-likelihood estimates
-  - Ancestry coefficient estimates
-  - Parameter estimates
+  - Parameter estimates per replicate
+
+### structureHarvester Output
+- `harvester_output_*/` directory containing:
+  - `summary.txt` - Summary statistics for all K values
+  - Evanno table with ΔK calculations
+  - CLUMPP input files
+
+### Visualization Output
+- `Admixture_Labeled_K{K}_COUNTY_IOWA_NE_KS.pdf` - Publication-ready admixture plot
 
 ## Resource Requirements
 
@@ -134,6 +211,8 @@ PGDSpider conversion settings:
 | PLINK | 10h | 32GB | 1 |
 | PGDSpider | 10h | 20GB | 1 |
 | STRUCTURE | 7 days | 50GB | 12 |
+| Harvester | <1h | 8GB | 1 |
+| Plotting | <5min | 4GB | 1 |
 
 ## Troubleshooting
 
@@ -146,30 +225,57 @@ PGDSpider conversion settings:
 2. **PGDSpider conversion fails**
    - Verify VCF file format and completeness
    - Check spid.spid configuration file
+   - Ensure input VCF path is correct
 
-3. **STRUCTURE crashes**
+3. **STRUCTURE crashes or parameter errors**
    - Ensure mainparams and extraparams are in working directory
+   - Verify `--params` flag points to correct mainparams file
+   - Check that NUMLOCI matches actual number of SNPs in .str file
    - Verify input file format matches STRUCTURE requirements
    - Check memory allocation for large datasets
+
+4. **Plotting script errors**
+   - Verify label file has same number of entries as samples
+   - Check that K value matches available .indfile
+   - Ensure matplotlib and pandas are installed
 
 ### File Format Requirements
 
 - **VCF files:** Must be properly formatted with GT field
-- **Missing data:** Should be coded consistently
+- **Missing data:** Should be coded consistently (-9 in STRUCTURE)
 - **Sample names:** Avoid special characters and spaces
+- **Label file:** One label per line, matching sample order
 
-## Citation
+### Parameter Tuning
 
-If using this pipeline, please cite:
-- **PLINK:** Purcell et al. (2007) and Chang et al. (2015)
-- **PGDSpider:** Lischer & Excoffier (2012)
-- **STRUCTURE:** Pritchard et al. (2000)
-- **structure-threader:** Pina-Martins et al. (2017)
+**For faster testing:**
+- Reduce BURNIN to 10,000
+- Reduce NUMREPS to 50,000
+- Reduce number of replicates (-R flag)
 
-## Contact
+**For publication-quality results:**
+- Use recommended settings (BURNIN: 50,000, NUMREPS: 200,000)
+- Run at least 10-20 replicates per K
+- Test K range that brackets expected populations
 
-For questions or issues with this pipeline, please contact the Fauver Lab.
+## Workflow Example
 
-## License
+Complete analysis workflow for new dataset:
 
-This pipeline is provided as-is for research purposes.
+```bash
+# 1. LD pruning
+sbatch scripts/plink.sh
+
+# 2. Format conversion
+sbatch scripts/pgd_spider.sh
+
+# 3. Run STRUCTURE (wait for completion, ~7 days)
+sbatch scripts/structure.sh
+
+# 4. Harvest results
+python scripts/structureHarvester.py
+
+# 5. Generate plots for optimal K
+python3 scripts/plot_county.py 2
+python3 scripts/plot_county.py 3
+```
