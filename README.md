@@ -2,6 +2,12 @@
 
 A population genetics pipeline for converting VCF files to STRUCTURE format and performing population structure analysis on tick genomic data.
 
+
+[Admixture_Labeled_K2_COUNTY_IOWA_NE_KS.pdf](https://github.com/user-attachments/files/23102652/Admixture_Labeled_K2_COUNTY_IOWA_NE_KS.pdf)
+[Admixture_Labeled_K3_COUNTY_IOWA_NE_KS.pdf](https://github.com/user-attachments/files/23102650/Admixture_Labeled_K3_COUNTY_IOWA_NE_KS.pdf)
+<img width="541" height="198" alt="Screenshot 2025-10-21 135020" src="https://github.com/user-attachments/assets/5e654191-eba3-411b-8a2d-b50e118d2a2d" />
+<img width="742" height="602" alt="image" src="https://github.com/user-attachments/assets/4f705374-49eb-43e6-80e5-f8e0c95daf8d" />
+
 ## Overview
 
 This pipeline processes genomic variant data through several steps:
