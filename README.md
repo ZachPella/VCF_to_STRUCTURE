@@ -1,4 +1,4 @@
-# VCF_to_STRUCTURE
+# VCF_to_STRUCTURE_to_HARVESTER
 
 A population genetics pipeline for converting VCF files to STRUCTURE format and performing population structure analysis on tick genomic data.
 
